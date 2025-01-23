@@ -3,7 +3,7 @@ pandas
 plotly
 scipy
 numpy
-st-aggrid
+streamlit-aggrid
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
