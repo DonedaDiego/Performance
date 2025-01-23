@@ -219,7 +219,8 @@ elif chart_type == "Comparação":
         x=months[date_range[0]:date_range[1]+1],
         y=excedente_row[date_range[0]:date_range[1]+1],
         name='Excedente ao CDI',
-        marker_color=np.where(excedente_row[date_range[0]:date_range[1]+1] >= 0, '#4B9CD3', '#ff4444')
+        marker_color=np.where(pd.notnull(excedente_row[date_range[0]:date_range[1]+1]) & 
+                            (excedente_row[date_range[0]:date_range[1]+1] >= 0), '#4B9CD3', '#ff4444')
     ))
     
     fig.update_layout(
@@ -297,8 +298,9 @@ with st.expander("📊 Análise Estatística"):
                  months[np.argmin(resultado_row[date_range[0]:date_range[1]+1])])
     
     with col3:
-        meses_acima_cdi = sum(excedente_row[date_range[0]:date_range[1]+1] > 0)
-        total_meses = date_range[1] - date_range[0] + 1
+        valid_data = pd.Series(excedente_row[date_range[0]:date_range[1]+1]) > 0
+        meses_acima_cdi = valid_data[~valid_data.isna()].sum()
+        total_meses = sum(~valid_data.isna())
         st.metric("Meses acima do CDI",
                  f"{meses_acima_cdi}/{total_meses}",
                  f"{(meses_acima_cdi/total_meses*100):.1f}% do período")
