@@ -484,46 +484,46 @@ with alert_cols[2]:
     else:
         st.success("✅ Drawdown controlado")
 
-# Exportação de dados
-st.markdown("### 📥 Exportar Dados")
-export_cols = st.columns(3)
+# # Exportação de dados
+# st.markdown("### 📥 Exportar Dados")
+# export_cols = st.columns(3)
 
-with export_cols[0]:
-    # Preparar dados para CSV
-    export_df = pd.DataFrame({
-        'Mês': months,
-        'Retorno (%)': resultado_row,
-        'CDI (%)': cdi_row,
-        'Excedente (%)': excedente_row,
-        'Patrimônio': liquido_row
-    })
+# with export_cols[0]:
+#     # Preparar dados para CSV
+#     export_df = pd.DataFrame({
+#         'Mês': months,
+#         'Retorno (%)': resultado_row,
+#         'CDI (%)': cdi_row,
+#         'Excedente (%)': excedente_row,
+#         'Patrimônio': liquido_row
+#     })
     
-    csv = export_df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        "📥 Download CSV",
-        csv,
-        "performance_data.csv",
-        "text/csv",
-        key='download-csv'
-    )
+#     csv = export_df.to_csv(index=False).encode('utf-8')
+#     st.download_button(
+#         "📥 Download CSV",
+#         csv,
+#         "performance_data.csv",
+#         "text/csv",
+#         key='download-csv'
+#     )
 
-with export_cols[1]:
-    import io
-    import xlsxwriter
+# with export_cols[1]:
+#     import io
+#     import xlsxwriter
     
-    # Preparar Excel
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        export_df.to_excel(writer, sheet_name='Dados', index=False)
+#     # Preparar Excel
+#     buffer = io.BytesIO()
+#     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+#         export_df.to_excel(writer, sheet_name='Dados', index=False)
     
-    st.download_button(
-        "📥 Download Excel",
-        buffer.getvalue(),
-        "performance_data.xlsx",
-        "application/vnd.ms-excel",
-        key='download-excel'
-    )
+#     st.download_button(
+#         "📥 Download Excel",
+#         buffer.getvalue(),
+#         "performance_data.xlsx",
+#         "application/vnd.ms-excel",
+#         key='download-excel'
+#     )
 
-# with export_cols[2]:
-#     # Gerar relatório PDF
+# # with export_cols[2]:
+# #     # Gerar relatório PDF
 #     st.button("📥 Gerar Relatório PDF", key='generate-pdf')        

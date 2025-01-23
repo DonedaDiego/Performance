@@ -3,7 +3,7 @@ pandas
 plotly
 scipy
 numpy
-streamlit-aggrid==0.3.4
-openpyxl
+streamlit-aggrid
+openpyxl 
 xlrd
-XlsxWriter
+xlsxwriter
