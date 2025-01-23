@@ -38,9 +38,15 @@ st.markdown("""
 def load_data():
     try:
         df = pd.read_excel("base.xlsx")
-    except:
-        df = pd.read_csv("base.csv")
-    return df
+        print("Planilha carregada")
+        return df
+    except Exception as e:
+        print(f"Erro: {e}")
+        return None
+
+df = load_data()
+if df is not None:
+    print("Dados carregados com sucesso")
 
 df = load_data()
 months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -406,83 +412,68 @@ with kpi_tabs[2]:
         st.plotly_chart(fig_box, use_container_width=True)
 
 
-# Seção de Análise Preditiva
-st.markdown("### 🎯 Projeções")
-proj_col1, proj_col2 = st.columns([2,1])
+# # Seção de Análise Preditiva
+# st.markdown("### 🎯 Projeções")
+# proj_col1, proj_col2 = st.columns([2,1])
 
+   
+# with proj_col1:
+#     # Remove NaN antes dos cálculos
+#     valid_data = pd.Series(resultado_row).dropna()
+#     if len(valid_data) > 1:
+#         x = np.array(range(len(valid_data)))
+#         y = valid_data.values
+        
+#         slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+#         trend_line = slope * x + intercept
+#         future_x = np.array(range(len(valid_data), len(valid_data) + 3))
+#         future_trend = slope * future_x + intercept
+        
+#         fig_proj = go.Figure()
+#         fig_proj.add_trace(go.Scatter(
+#             x=months[:len(valid_data)],
+#             y=y,
+#             name='Retornos Reais',
+#             mode='markers+lines',
+#             marker=dict(size=8)
+#         ))
+        
+#         fig_proj.add_trace(go.Scatter(
+#             x=months[:len(valid_data)] + ['Proj 1', 'Proj 2', 'Proj 3'],
+#             y=np.concatenate([trend_line, future_trend]),
+#             name='Tendência',
+#             line=dict(dash='dash')
+#         ))
+        
+#         with proj_col2:
+#             st.markdown("#### Métricas de Tendência")
+#             st.metric("Dados insuficientes", "Necessário mais dados para projeção")
 
-with proj_col1:
-    # Criando os arrays corretamente
-    x = np.array(range(12))  # array fixo de 12 meses
-    y = np.array(resultado_row, dtype=float)  # converter para float
-    
-    # Calcular regressão
-    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-    
-    # Criar linha de tendência
-    trend_line = slope * x + intercept
-    
-    # Projetar próximos meses
-    future_x = np.array(range(12, 15))  # próximos 3 meses
-    future_trend = slope * future_x + intercept
-    
-    # Criar gráfico
-    fig_proj = go.Figure()
-    
-    # Dados reais
-    fig_proj.add_trace(go.Scatter(
-        x=months,
-        y=y,
-        name='Retornos Reais',
-        mode='markers+lines',
-        marker=dict(size=8)
-    ))
-    
-    # Linha de tendência + projeção
-    fig_proj.add_trace(go.Scatter(
-        x=months + ['Proj 1', 'Proj 2', 'Proj 3'],
-        y=np.concatenate([trend_line, future_trend]),
-        name='Tendência',
-        line=dict(dash='dash')
-    ))
-    
-    fig_proj.update_layout(
-        title="Tendência e Projeção",
-        template='plotly_dark',
-        height=400
-    )
-    
-    st.plotly_chart(fig_proj, use_container_width=True)
+# # Seção de Alertas e Recomendações
+# st.markdown("### ⚠️ Alertas e Recomendações")
+# alert_cols = st.columns(3)
 
-    with proj_col2:
-        st.markdown("#### Métricas de Tendência")
-        st.metric("Inclinação", f"{slope:.4f}")
-        st.metric("R²", f"{r_value**2:.4f}")
-        st.metric("Projeção 3 meses", f"{future_trend[-1]:.2f}%")
+# with alert_cols[0]:
+#     r_mean = pd.Series(resultado_row[-3:]).mean()
+#     c_mean = pd.Series(cdi_row[-3:]).mean()
+#     if pd.notnull(r_mean) and pd.notnull(c_mean) and r_mean < c_mean:
+#         st.warning("⚠️ Retorno abaixo do CDI nos últimos 3 meses")
+#     else:
+#         st.success("✅ Retorno acima do CDI mantido")
 
-# Seção de Alertas e Recomendações
-st.markdown("### ⚠️ Alertas e Recomendações")
-alert_cols = st.columns(3)
+# with alert_cols[1]:
+#     vol_recente = rolling_vol.iloc[-1]
+#     if pd.notnull(vol_recente) and vol_recente > rolling_vol.mean():
+#         st.warning(f"⚠️ Volatilidade elevada: {vol_recente:.2f}%")
+#     else:
+#         st.success("✅ Volatilidade controlada")
 
-with alert_cols[0]:
-    if np.mean(resultado_row[-3:]) < np.mean(cdi_row[-3:]):
-        st.warning("⚠️ Retorno abaixo do CDI nos últimos 3 meses")
-    else:
-        st.success("✅ Retorno acima do CDI mantido")
-
-with alert_cols[1]:
-    vol_recente = rolling_vol.iloc[-1]
-    if vol_recente > rolling_vol.mean():
-        st.warning(f"⚠️ Volatilidade elevada: {vol_recente:.2f}%")
-    else:
-        st.success("✅ Volatilidade controlada")
-
-with alert_cols[2]:
-    drawdown_atual = drawdown.iloc[-1]
-    if drawdown_atual < -5:
-        st.warning(f"⚠️ Drawdown significativo: {drawdown_atual:.2f}%")
-    else:
-        st.success("✅ Drawdown controlado")
+# with alert_cols[2]:
+#     drawdown_atual = drawdown.iloc[-1]
+#     if pd.notnull(drawdown_atual) and drawdown_atual < -5:
+#         st.warning(f"⚠️ Drawdown significativo: {drawdown_atual:.2f}%")
+#     else:
+#         st.success("✅ Drawdown controlado")
 
 # # Exportação de dados
 # st.markdown("### 📥 Exportar Dados")
