@@ -37,9 +37,9 @@ st.markdown("""
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_excel("C:/Users/usuario/Desktop/Clientes/Octavio/base.xlsx")
+        df = pd.read_excel("base.xlsx")
     except:
-        df = pd.read_csv("base.csv")  # Backup em CSV
+        df = pd.read_csv("base.csv")
     return df
 
 df = load_data()
