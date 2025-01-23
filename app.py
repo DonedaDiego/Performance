@@ -6,6 +6,9 @@ from scipy import stats
 import numpy as np
 from datetime import datetime
 from st_aggrid import AgGrid, GridOptionsBuilder
+from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 import openpyxl
 import xlrd
 import xlsxwriter
@@ -36,17 +39,50 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
+    SPREADSHEET_ID = '1qEQoNFQPKP64-DXOvNSquKXy8B36Og4i5YSB-LXS5dQ'
+    RANGE_NAME = 'dash!A1:N9'
+    API_KEY = 'AIzaSyBh1_W5gtZdJlQdNbA7bUrSsmzMPSQIfVE'
+
     try:
-        df = pd.read_excel("base.xlsx")
-        print("Planilha carregada")
+        service = build('sheets', 'v4', developerKey=API_KEY)
+        result = service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range=RANGE_NAME
+        ).execute()
+
+        values = result.get('values', [])
+        print("Valores brutos do Google Sheets:", values)
+
+        # Ajuste para normalizar as linhas
+        max_cols = len(values[0])  # Número máximo de colunas baseado no cabeçalho
+        normalized_values = [
+            row + [''] * (max_cols - len(row))  # Preenche linhas com colunas faltantes
+            for row in values
+        ]
+
+        # Cria o DataFrame com os dados normalizados
+        df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
+
+        # Converte colunas numéricas
+        numeric_columns = df.columns[1:]  # Ignorar a primeira coluna "Status"
+        for col in numeric_columns:
+            if df[col].dtype == 'object':  # Apenas processar colunas que sejam strings
+                df[col] = (
+                    df[col]
+                    .str.replace('.', '', regex=False)  # Remove separadores de milhar
+                    .str.replace(',', '.', regex=False)  # Substitui vírgulas por pontos decimais
+                )
+                df[col] = pd.to_numeric(df[col], errors='coerce')  # Converte para numérico
+
+        print("\nDataFrame após normalização:")
+        print(df)
         return df
+
     except Exception as e:
-        print(f"Erro: {e}")
+        st.error(f"Erro ao carregar dados: {e}")
+        print(f"Erro detalhado: {e}")
         return None
 
-df = load_data()
-if df is not None:
-    print("Dados carregados com sucesso")
 
 df = load_data()
 months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -412,7 +448,6 @@ with kpi_tabs[2]:
             height=300
         )
         st.plotly_chart(fig_box, use_container_width=True)
-
 
 # # Seção de Análise Preditiva
 # st.markdown("### 🎯 Projeções")

@@ -3,7 +3,11 @@ pandas
 plotly
 scipy
 numpy
-streamlit-aggrid
-openpyxl 
+st-aggrid
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+openpyxl
 xlrd
 xlsxwriter
