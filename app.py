@@ -102,12 +102,26 @@ chart_type = st.sidebar.selectbox(
     ["Retorno Acumulado", "Retorno Mensal", "Comparação", "Fluxo de Caixa"]
 )
 
+# Botão de Atualizar
+atualizar = st.sidebar.button("🔄 Atualizar Base de Dados")
+
+
+
+# Verifica se é necessário recarregar os dados
+if "dados_atualizados" in st.session_state and st.session_state["dados_atualizados"]:
+    df = load_data()  # Recarrega os dados
+    st.session_state["dados_atualizados"] = False  # Marca como atualizado
+else:
+    df = load_data()  # Carrega os dados do cache
+
+# Configuração do Período de Análise
 date_range = st.sidebar.select_slider(
     "Período de Análise",
     options=range(len(months)),
     value=(0, len(months)-1),
     format_func=lambda x: months[x]
 )
+
 
 df_performance = pd.DataFrame({
     'Mês': months[date_range[0]:date_range[1]+1],
@@ -129,7 +143,6 @@ for col in ['Desconto CDI', 'Gemini', 'Líquido']:
 # Filtre apenas linhas com dados
 df_performance = df_performance.dropna()
 df_fluxo = df_fluxo.dropna()
-
 
 
 # Header com métricas principais
