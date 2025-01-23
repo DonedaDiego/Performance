@@ -6,6 +6,9 @@ from scipy import stats
 import numpy as np
 from datetime import datetime
 from st_aggrid import AgGrid, GridOptionsBuilder
+import openpyxl
+import xlrd
+import xlsxwriter
 
 st.set_page_config(layout="wide", page_title="Dashboard Financeiro", page_icon="📊")
 
@@ -33,7 +36,10 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    df = pd.read_excel("C:/Users/usuario/Desktop/Clientes/Octavio/base.xlsx")
+    try:
+        df = pd.read_excel("C:/Users/usuario/Desktop/Clientes/Octavio/base.xlsx")
+    except:
+        df = pd.read_csv("base.csv")  # Backup em CSV
     return df
 
 df = load_data()

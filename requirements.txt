@@ -5,3 +5,5 @@ scipy
 numpy
 streamlit-aggrid==0.3.4
 openpyxl
+xlrd
+XlsxWriter
