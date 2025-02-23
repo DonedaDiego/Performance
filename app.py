@@ -8,40 +8,88 @@ import numpy as np
 # Set page config
 st.set_page_config(page_title="Investment Dashboard", layout="wide", initial_sidebar_state="collapsed")
 
-# Custom CSS
+# Custom CSS for dark theme
 st.markdown("""
     <style>
+    /* Main page background */
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    
     .main {
         padding: 0rem 1rem;
     }
-    .stMetric {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 10px;
+    
+    /* Headers */
+    h1, h2, h3, h4, h5, h6 {
+        color: #ffffff !important;
     }
+    
+    /* Metric cards */
+    div[data-testid="stMetricValue"] {
+        color: #ffffff !important;
+    }
+    div[data-testid="stMetricDelta"] {
+        color: #4CAF50 !important;
+    }
+    div[data-testid="metric-container"] {
+        background-color: #1e2130;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+    
     div[data-testid="stHorizontalBlock"] {
-        background-color: #ffffff;
+        background-color: #1e2130;
         padding: 20px;
         border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
+        background-color: #1e2130;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        color: #ffffff;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Function to load and prepare data
 def load_data():
-    data = {
-        'Mês': ['Jan', 'Fev', 'Mar'],
-        'Total': [300000.00, 303360.71],
-        'CDI': [1.1, 0.74],
-        'Rendimento_Fixo': [0, 1946.69],
-        'Rendimento_Variavel': [0, 1414.02],
-        'Performance_Carteira': [0.0, 1.12],
-        'Rendimento_Acumulado': [0, 3360.71]
+    # Dicionário de dados mensais - Atualize aqui os valores de cada mês
+    monthly_data = {
+        'Jan': {
+            'Total': 300000.00,
+            'CDI': 1.1,
+            'Rendimento_Fixo': 0,
+            'Rendimento_Variavel': 0,
+            'Performance_Carteira': 0.0,
+            'Ops_Aberto': 0,
+        },
+        'Fev': {
+            'Total': 304490.71,
+            'CDI': 0.74,
+            'Rendimento_Fixo': 1946.69,
+            'Rendimento_Variavel': 2544.02,
+            'Performance_Carteira': 1.50,
+            'Ops_Aberto': 5316.98,
+        }
     }
-    df = pd.DataFrame(data)
+    
+    # Criando DataFrame
+    df = pd.DataFrame.from_dict(monthly_data, orient='index')
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'Mês'}, inplace=True)
+    
+    # Calculando rendimento acumulado
+    df['Rendimento_Acumulado'] = df['Total'] - df['Total'].iloc[0]
     df['Retorno_Percentual'] = df['Total'].pct_change() * 100
-    return df
+    
+    return df  # ✅ Agora retorna corretamente o DataFrame
+ 
 
 def create_waterfall_chart(df):
     fig = go.Figure(go.Waterfall(
@@ -56,8 +104,10 @@ def create_waterfall_chart(df):
     ))
     fig.update_layout(
         title="Evolução Patrimonial (Waterfall)",
-        showlegend=False,
-        height=400
+        height=400,
+        plot_bgcolor='#0e1117',
+        paper_bgcolor='#0e1117',
+        font=dict(color='#ffffff')
     )
     return fig
 
@@ -69,31 +119,31 @@ def create_performance_gauge(current_performance, max_performance=2):
         gauge={
             'axis': {'range': [None, max_performance]},
             'steps': [
-                {'range': [0, max_performance/2], 'color': "lightgray"},
-                {'range': [max_performance/2, max_performance], 'color': "gray"}],
+                {'range': [0, max_performance/2], 'color': "#1e2130"},
+                {'range': [max_performance/2, max_performance], 'color': "#2c3147"}],
             'threshold': {
-                'line': {'color': "red", 'width': 4},
+                'line': {'color': "#4CAF50", 'width': 4},
                 'thickness': 0.75,
                 'value': current_performance}},
-        title={'text': "Performance Atual (%)"}))
-    fig.update_layout(height=250)
+        title={'text': "Performance Atual (%)", 'font': {'color': '#ffffff'}}))
+    fig.update_layout(height=250, paper_bgcolor='#0e1117', font={'color': '#ffffff'})
     return fig
 
 def main():
-    st.title("📈 Dashboard Avançado de Investimentos")
+    st.title("📈 Dashboard de Investimentos")
     
     # Load data
     df = load_data()
     
     # Top metrics row
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)  # Adicionada uma coluna
     
     with col1:
         st.metric(
             "Patrimônio Total",
             f"R$ {df['Total'].iloc[-1]:,.2f}",
-            f"{df['Retorno_Percentual'].iloc[-1]:.2f}%",
-            help="Valor total atual da carteira com variação percentual"
+            f"{df['Retorno_Percentual'].iloc[-1]:.2f}%" if len(df) > 1 else None,
+            help="Valor total atual da carteira"
         )
     
     with col2:
@@ -117,7 +167,13 @@ def main():
             f"R$ {max(df['Rendimento_Fixo'] + df['Rendimento_Variavel']):,.2f}",
             help="Maior rendimento mensal registrado"
         )
-
+    
+    with col5:
+        st.metric(
+            "Operações em Aberto",
+            f"R$ {df['Ops_Aberto'].iloc[-1]:,.2f}",
+            help="Valor total das operações em aberto no mês atual"
+        )
     # Charts section
     st.markdown("### Análise Detalhada")
     
@@ -127,22 +183,23 @@ def main():
         col_chart1, col_chart2 = st.columns(2)
         
         with col_chart1:
-            # Waterfall chart
             st.plotly_chart(create_waterfall_chart(df), use_container_width=True)
             
         with col_chart2:
-            # Área chart
             fig_area = px.area(df, x='Mês', y='Total',
                              title='Evolução Patrimonial (Área)',
-                             labels={'Total': 'Patrimônio Total'},
-                             line_shape='spline')
+                             labels={'Total': 'Patrimônio Total'})
+            fig_area.update_layout(
+                plot_bgcolor='#0e1117',
+                paper_bgcolor='#0e1117',
+                font=dict(color='#ffffff')
+            )
             st.plotly_chart(fig_area, use_container_width=True)
     
     with tab2:
         col_chart3, col_chart4 = st.columns(2)
         
         with col_chart3:
-            # Rendimentos stacked bar
             rendimentos_df = df.melt(
                 id_vars=['Mês'],
                 value_vars=['Rendimento_Fixo', 'Rendimento_Variavel'],
@@ -152,10 +209,14 @@ def main():
             fig_stack = px.bar(rendimentos_df, x='Mês', y='Valor',
                              color='Tipo', title='Composição dos Rendimentos',
                              barmode='stack')
+            fig_stack.update_layout(
+                plot_bgcolor='#0e1117',
+                paper_bgcolor='#0e1117',
+                font=dict(color='#ffffff')
+            )
             st.plotly_chart(fig_stack, use_container_width=True)
             
         with col_chart4:
-            # Donut chart for composition
             total_fixo = df['Rendimento_Fixo'].sum()
             total_var = df['Rendimento_Variavel'].sum()
             fig_donut = go.Figure(data=[go.Pie(
@@ -163,36 +224,58 @@ def main():
                 values=[total_fixo, total_var],
                 hole=.3
             )])
-            fig_donut.update_layout(title='Distribuição dos Rendimentos')
+            fig_donut.update_layout(
+                title='Distribuição dos Rendimentos',
+                plot_bgcolor='#0e1117',
+                paper_bgcolor='#0e1117',
+                font=dict(color='#ffffff')
+            )
             st.plotly_chart(fig_donut, use_container_width=True)
     
     with tab3:
         col_chart5, col_chart6 = st.columns(2)
         
         with col_chart5:
-            # Performance gauge
             st.plotly_chart(
                 create_performance_gauge(df['Performance_Carteira'].iloc[-1]),
                 use_container_width=True
             )
             
         with col_chart6:
-            # Performance vs CDI
             fig_comp = go.Figure()
             fig_comp.add_trace(go.Scatter(
                 x=df['Mês'],
                 y=df['Performance_Carteira'],
                 name='Performance Carteira',
-                line=dict(color='blue')
+                line=dict(color='#00B8D4')
             ))
             fig_comp.add_trace(go.Scatter(
                 x=df['Mês'],
                 y=df['CDI'],
                 name='CDI',
-                line=dict(color='red', dash='dash')
+                line=dict(color='#FFB300', dash='dash')
             ))
-            fig_comp.update_layout(title='Performance vs CDI')
+            fig_comp.update_layout(
+                title='Performance vs CDI',
+                plot_bgcolor='#0e1117',
+                paper_bgcolor='#0e1117',
+                font=dict(color='#ffffff')
+            )
             st.plotly_chart(fig_comp, use_container_width=True)
+    
+    st.markdown("### 📋 Operações em Aberto")
+    ops_df = pd.DataFrame({
+        'Mês': df['Mês'],
+        'Valor em Aberto': df['Ops_Aberto']
+    })
+    
+    st.dataframe(
+        ops_df.style.format({
+            'Valor em Aberto': 'R$ {:,.2f}'
+        }),
+        hide_index=True,
+        use_container_width=True
+    )
     
     # Detailed data section with expander
     with st.expander("📋 Dados Detalhados"):
@@ -208,14 +291,6 @@ def main():
             }),
             use_container_width=True
         )
-
-    # Footer with additional information
-    st.markdown("---")
-    st.markdown("""
-        <div style='text-align: center'>
-            <p>Dashboard atualizado em tempo real | Dados históricos disponíveis</p>
-        </div>
-    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
