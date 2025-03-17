@@ -5,11 +5,17 @@ import plotly.graph_objects as go
 from datetime import datetime
 import numpy as np
 
+# Função auxiliar para formatar em padrão brasileiro
+def format_brl(value):
+    """Formata um valor para o padrão brasileiro (R$ 1.234,56)."""
+    return f"R$ {value:_.2f}".replace(".", ",").replace("_", ".")
+
 # Set page config
 st.set_page_config(page_title="Investment Dashboard", layout="wide", initial_sidebar_state="collapsed")
 
-# Custom CSS for dark theme
-st.markdown("""
+# Custom CSS para tema escuro
+st.markdown(
+    """
     <style>
     /* Main page background */
     .stApp {
@@ -30,9 +36,10 @@ st.markdown("""
     div[data-testid="stMetricValue"] {
         color: #ffffff !important;
     }
-    div[data-testid="stMetricDelta"] {
+    /* Removida a estilização fixa de cor para os deltas */
+    /* div[data-testid="stMetricDelta"] {
         color: #4CAF50 !important;
-    }
+    } */
     div[data-testid="metric-container"] {
         background-color: #1e2130;
         padding: 1rem;
@@ -56,7 +63,9 @@ st.markdown("""
         color: #ffffff;
     }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
 def load_data():
     # Dicionário de dados mensais - Atualize aqui os valores de cada mês
@@ -70,12 +79,20 @@ def load_data():
             'Ops_Aberto': 0,
         },
         'Fev': {
-            'Total': 304490.71,
-            'CDI': 0.74,
+            'Total': 307390.71,
+            'CDI': 1.0,
             'Rendimento_Fixo': 1946.69,
-            'Rendimento_Variavel': 2544.02,
-            'Performance_Carteira': 1.50,
-            'Ops_Aberto': 5316.98,
+            'Rendimento_Variavel': 5444.02,
+            'Performance_Carteira': 1.46,
+            'Ops_Aberto': 0,
+        },
+        'Mar': {
+            'Total': 302282.20,
+            'CDI': 0.98,
+            'Rendimento_Fixo': 1001.09,
+            'Rendimento_Variavel': -6109.51,
+            'Performance_Carteira': -2.64,
+            'Ops_Aberto': 7202.49,
         }
     }
     
@@ -88,44 +105,81 @@ def load_data():
     df['Rendimento_Acumulado'] = df['Total'] - df['Total'].iloc[0]
     df['Retorno_Percentual'] = df['Total'].pct_change() * 100
     
-    return df  # ✅ Agora retorna corretamente o DataFrame
- 
+    return df
 
 def create_waterfall_chart(df):
+    # 1) Valor absoluto do primeiro mês
+    first_value = df['Total'].iloc[0]
+
+    # 2) Diferenças dos meses seguintes
+    diffs = df['Total'].diff().iloc[1:].tolist()
+
+    # Montando a lista final para o Waterfall:
+    #   - Primeiro item é absoluto
+    #   - Demais são "relative"
+    y_values = [first_value] + diffs 
+    measures = ["absolute"] + ["relative"] * (len(diffs))
+
+    # Texto que mostra o valor final de cada mês (para exibir lá em cima/outside)
+    custom_texts = [f"R$ {val:,.2f}".replace(".", ",").replace(",", ".", 1) 
+                    for val in df['Total']]
+
     fig = go.Figure(go.Waterfall(
         name="Variação Patrimonial",
         orientation="v",
-        measure=["absolute"] + ["relative"] * (len(df) - 1),
+        measure=measures,
         x=df['Mês'],
+        text=custom_texts,         # Mostra o valor total daquele mês
         textposition="outside",
-        text=[f"R$ {x:,.2f}" for x in df['Total']],
-        y=df['Total'],
+        y=y_values,                # Agora vai conter [300k, +7k, -5k, etc...]
         connector={"line": {"color": "rgb(63, 63, 63)"}},
+        increasing={"marker": {"color": "#4CAF50"}},
+        decreasing={"marker": {"color": "#F44336"}}
     ))
     fig.update_layout(
         title="Evolução Patrimonial (Waterfall)",
         height=400,
         plot_bgcolor='#0e1117',
         paper_bgcolor='#0e1117',
-        font=dict(color='#ffffff')
-    )
+        font=dict(color='#ffffff'),
+        margin=dict(l=40, r=40, t=80, b=40),
+        )
+    fig.update_traces(
+        textposition="auto",
+        textfont_size=12,
+        cliponaxis=False,
+        width=0.6
+        )
+
     return fig
 
-def create_performance_gauge(current_performance, max_performance=2):
+
+def create_performance_gauge(current_performance, max_performance=3):
+    # Ajustado para lidar com valores negativos
+    min_value = -max_performance if current_performance < 0 else -max_performance/2
+    max_value = max_performance
+    
+    # Definindo cores baseadas no valor atual
+    color = "#4CAF50" if current_performance >= 0 else "#F44336"
+    
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=current_performance,
         domain={'x': [0, 1], 'y': [0, 1]},
         gauge={
-            'axis': {'range': [None, max_performance]},
+            'axis': {'range': [min_value, max_value]},
             'steps': [
-                {'range': [0, max_performance/2], 'color': "#1e2130"},
-                {'range': [max_performance/2, max_performance], 'color': "#2c3147"}],
+                {'range': [min_value, 0], 'color': "#2c3147"},
+                {'range': [0, max_value], 'color': "#1e2130"}
+            ],
             'threshold': {
-                'line': {'color': "#4CAF50", 'width': 4},
+                'line': {'color': color, 'width': 4},
                 'thickness': 0.75,
-                'value': current_performance}},
-        title={'text': "Performance Atual (%)", 'font': {'color': '#ffffff'}}))
+                'value': current_performance
+            }
+        },
+        title={'text': "Performance Atual (%)", 'font': {'color': '#ffffff'}}
+    ))
     fig.update_layout(height=250, paper_bgcolor='#0e1117', font={'color': '#ffffff'})
     return fig
 
@@ -136,12 +190,12 @@ def main():
     df = load_data()
     
     # Top metrics row
-    col1, col2, col3, col4, col5 = st.columns(5)  # Adicionada uma coluna
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         st.metric(
             "Patrimônio Total",
-            f"R$ {df['Total'].iloc[-1]:,.2f}",
+            format_brl(df['Total'].iloc[-1]),
             f"{df['Retorno_Percentual'].iloc[-1]:.2f}%" if len(df) > 1 else None,
             help="Valor total atual da carteira"
         )
@@ -149,7 +203,7 @@ def main():
     with col2:
         st.metric(
             "Rendimento Acumulado",
-            f"R$ {df['Rendimento_Acumulado'].iloc[-1]:,.2f}",
+            format_brl(df['Rendimento_Acumulado'].iloc[-1]),
             f"{df['Performance_Carteira'].iloc[-1]:.2f}%",
             help="Rendimento total acumulado desde o início"
         )
@@ -157,23 +211,38 @@ def main():
     with col3:
         st.metric(
             "CDI Acumulado",
-            f"{df['CDI'].sum():.2f}%",
+            f"{df['CDI'].sum():.2f}%",  # Continua em formato de porcentagem
             help="Taxa CDI acumulada no período"
         )
     
     with col4:
+        rendimentos_mensais = df['Rendimento_Fixo'] + df['Rendimento_Variavel']
+        melhor_rendimento = rendimentos_mensais.max()
+        pior_rendimento = rendimentos_mensais.min()
+        
+        melhor_mes = df.loc[rendimentos_mensais.idxmax(), 'Mês']
         st.metric(
             "Melhor Rendimento Mensal",
-            f"R$ {max(df['Rendimento_Fixo'] + df['Rendimento_Variavel']):,.2f}",
+            format_brl(melhor_rendimento),
+            f"Mês: {melhor_mes}",
             help="Maior rendimento mensal registrado"
         )
     
     with col5:
+        delta_ops = None
+        if len(df) > 1:
+            # Calcula a diferença entre o valor atual e o valor do mês anterior
+            diff_val = df['Ops_Aberto'].iloc[-1] - df['Ops_Aberto'].iloc[-2]
+            # Formata com sinal + ou -
+            delta_ops = f"{'+' if diff_val >= 0 else '-'}{format_brl(abs(diff_val))[3:]}"
+        
         st.metric(
             "Operações em Aberto",
-            f"R$ {df['Ops_Aberto'].iloc[-1]:,.2f}",
+            format_brl(df['Ops_Aberto'].iloc[-1]),
+            delta_ops,
             help="Valor total das operações em aberto no mês atual"
         )
+    
     # Charts section
     st.markdown("### Análise Detalhada")
     
@@ -186,9 +255,13 @@ def main():
             st.plotly_chart(create_waterfall_chart(df), use_container_width=True)
             
         with col_chart2:
-            fig_area = px.area(df, x='Mês', y='Total',
-                             title='Evolução Patrimonial (Área)',
-                             labels={'Total': 'Patrimônio Total'})
+            fig_area = px.area(
+                df, 
+                x='Mês', 
+                y='Total',
+                title='Evolução Patrimonial (Área)',
+                labels={'Total': 'Patrimônio Total'}
+            )
             fig_area.update_layout(
                 plot_bgcolor='#0e1117',
                 paper_bgcolor='#0e1117',
@@ -206,26 +279,55 @@ def main():
                 var_name='Tipo',
                 value_name='Valor'
             )
-            fig_stack = px.bar(rendimentos_df, x='Mês', y='Valor',
-                             color='Tipo', title='Composição dos Rendimentos',
-                             barmode='stack')
+            fig_stack = px.bar(
+                rendimentos_df, 
+                x='Mês', 
+                y='Valor',
+                color='Tipo', 
+                title='Composição dos Rendimentos',
+                color_discrete_map={
+                    'Rendimento_Fixo': '#4CAF50',
+                    'Rendimento_Variavel': '#2196F3'
+                }
+            )
+            
+            fig_stack.update_traces(marker_line_width=0)
             fig_stack.update_layout(
                 plot_bgcolor='#0e1117',
                 paper_bgcolor='#0e1117',
-                font=dict(color='#ffffff')
+                font=dict(color='#ffffff'),
+                barmode='relative'
             )
             st.plotly_chart(fig_stack, use_container_width=True)
             
         with col_chart4:
             total_fixo = df['Rendimento_Fixo'].sum()
             total_var = df['Rendimento_Variavel'].sum()
+            
+            valores_abs = [abs(total_fixo), abs(total_var)]
+            cores = [
+                '#4CAF50' if total_fixo >= 0 else '#F44336',
+                '#2196F3' if total_var >= 0 else '#F44336'
+            ]
+            
             fig_donut = go.Figure(data=[go.Pie(
                 labels=['Renda Fixa', 'Renda Variável'],
-                values=[total_fixo, total_var],
-                hole=.3
+                values=valores_abs,
+                hole=.3,
+                marker_colors=cores,
+                textinfo='label+percent',
+                hoverinfo='label+value'
             )])
+            
+            fig_donut.add_annotation(
+                text=f"RF: {format_brl(total_fixo)}<br>RV: {format_brl(total_var)}",
+                x=0.5, y=0.5,
+                font_size=10,
+                showarrow=False
+            )
+            
             fig_donut.update_layout(
-                title='Distribuição dos Rendimentos',
+                title='Distribuição dos Rendimentos (valores absolutos)',
                 plot_bgcolor='#0e1117',
                 paper_bgcolor='#0e1117',
                 font=dict(color='#ffffff')
@@ -255,6 +357,17 @@ def main():
                 name='CDI',
                 line=dict(color='#FFB300', dash='dash')
             ))
+            
+            # Adicionando linha de zero para melhor visualização
+            fig_comp.add_shape(
+                type="line",
+                x0=df['Mês'].iloc[0],
+                y0=0,
+                x1=df['Mês'].iloc[-1],
+                y1=0,
+                line=dict(color="gray", width=1, dash="dot")
+            )
+            
             fig_comp.update_layout(
                 title='Performance vs CDI',
                 plot_bgcolor='#0e1117',
@@ -269,9 +382,10 @@ def main():
         'Valor em Aberto': df['Ops_Aberto']
     })
     
+    # Aqui usamos a função na formatação do dataframe
     st.dataframe(
         ops_df.style.format({
-            'Valor em Aberto': 'R$ {:,.2f}'
+            'Valor em Aberto': lambda x: format_brl(x)
         }),
         hide_index=True,
         use_container_width=True
@@ -281,12 +395,12 @@ def main():
     with st.expander("📋 Dados Detalhados"):
         st.dataframe(
             df.style.format({
-                'Total': 'R$ {:,.2f}',
+                'Total': lambda x: format_brl(x),
                 'CDI': '{:.2f}%',
-                'Rendimento_Fixo': 'R$ {:,.2f}',
-                'Rendimento_Variavel': 'R$ {:,.2f}',
+                'Rendimento_Fixo': lambda x: format_brl(x),
+                'Rendimento_Variavel': lambda x: format_brl(x),
                 'Performance_Carteira': '{:.2f}%',
-                'Rendimento_Acumulado': 'R$ {:,.2f}',
+                'Rendimento_Acumulado': lambda x: format_brl(x),
                 'Retorno_Percentual': '{:.2f}%'
             }),
             use_container_width=True
